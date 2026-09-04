@@ -2864,7 +2864,7 @@
   <style id="ax-chatbot-style">
 :root{--ink:var(--text);--ink2:var(--text);--card:var(--surface);--border:var(--line);--hover:var(--surface-soft);--font:Pretendard,"Segoe UI","Noto Sans KR",Arial,sans-serif;}
 .dev-mode-trigger{position:absolute;left:0;bottom:0;z-index:17;width:100%;padding:10px 0;text-align:center;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.05em;opacity:.35;user-select:none;cursor:default}
-.rag-launch{position:fixed;right:22px;bottom:22px;z-index:420;border:0;border-radius:999px;background:linear-gradient(135deg,var(--green-950),var(--green-600));color:#fff;padding:16px 26px;font:700 16px var(--font);box-shadow:0 8px 24px rgba(11,59,37,.3);cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform .15s ease}
+.rag-launch{position:fixed;right:22px;bottom:22px;z-index:420;border:0;border-radius:999px;background:linear-gradient(135deg,var(--green-950),var(--green-600));color:#fff;padding:16px 26px;font:700 16px var(--font);box-shadow:0 8px 24px rgba(11,59,37,.3);cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform .15s ease}body.presentation-open .rag-launch{display:none}
 .rag-launch[hidden]{display:none!important}
 .rag-launch:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(11,59,37,.38)}
 .tkp-natural-drawer{position:fixed!important;z-index:99999!important;top:12px!important;right:8px!important;bottom:12px!important;left:auto!important;width:44vw!important;min-width:480px!important;max-width:760px!important;height:auto!important;margin:0!important;padding:0!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;border:1px solid var(--line)!important;border-radius:18px!important;background:var(--surface)!important;color:var(--text)!important;box-shadow:0 20px 50px rgba(0,0,0,.22)!important;overflow:hidden!important;transform:translate3d(calc(100% + 40px),0,0)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .4s ease,visibility 0s linear .4s!important}
@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">v1</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">v06</div>
     </aside>
 
     <main>
@@ -6005,21 +6005,6 @@ window.INVENTORY_LOCK=(()=>{
         if (apiKeyInput.value.trim()) setApiState("대시보드 암호를 자동으로 연결했습니다 · 바로 질문해 보세요.", "ok");
         let geminiBusy = false;
         const friendlyError = error => String((error && error.message) || error || "AI 연결 오류").replace(/Gemini/gi, "AI").replace(/generativelanguage\.googleapis\.com/gi, "AI API");
-        (function initDevModeTrigger(){
-          const trigger = $("#devModeTrigger");
-          if (!trigger) return;
-          let count = 0, timer = null;
-          trigger.addEventListener("click", () => {
-            count++;
-            clearTimeout(timer);
-            timer = setTimeout(() => { count = 0; }, 2000);
-            if (count >= 7) {
-              count = 0;
-              launch.hidden = false;
-              trigger.textContent = "v1 ✓";
-            }
-          });
-        })();
         const defaultSuggestions = suggestions.innerHTML;
         let viewHistory = [], chatHtml = "";
 
@@ -6606,7 +6591,7 @@ ${connectionOnly ? "" : ""}`;
     });
   </script>
 
-  <button class="rag-launch" id="ragLaunch" type="button" hidden>⌕ AX_챗봇</button>
+  <button class="rag-launch" id="ragLaunch" type="button">⌕ AX_챗봇</button>
   <div class="tkp-natural-drawer" id="tkpNaturalDrawer">
     <div class="rag-head"><div class="rag-head-title"><i>⌕</i><div><b>AX_챗봇</b></div></div><button class="rag-toolbar-button" id="ragSettings" type="button">연결 설정</button><button class="rag-close" id="ragClose" type="button" aria-label="닫기">×</button></div>
     <div class="rag-body">
