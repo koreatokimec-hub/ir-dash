@@ -2911,8 +2911,8 @@
 .rag-suggestions button:hover{border-color:var(--green-600);color:var(--green-700);background:color-mix(in srgb,var(--green-600) 8%,var(--card))}
 .rag-answer{margin-top:0;font-size:14px}.rag-chat{display:flex;flex-direction:column;gap:16px}.rag-message{display:flex;width:100%}.rag-message-user{justify-content:flex-end}.rag-message-assistant{justify-content:flex-start}.rag-user-pill{position:relative;max-width:78%;padding:11px 17px;border-radius:17px;background:linear-gradient(135deg,var(--green-950),var(--green-700));color:#fff;font-size:14.5px;font-weight:750;line-height:1.5;box-shadow:0 5px 15px rgba(11,59,37,.2);word-break:keep-all;overflow-wrap:anywhere}.rag-user-pill::after{content:'';position:absolute;right:-7px;bottom:5px;width:14px;height:14px;background:var(--green-700);clip-path:polygon(0 0,100% 100%,0 78%)}.rag-assistant-card{position:relative;width:min(94%,720px);padding:17px 18px;border:1px solid var(--line);border-radius:17px;background:var(--surface);box-shadow:0 7px 22px rgba(11,59,37,.08)}.rag-assistant-card::before{content:'';position:absolute;left:-8px;top:14px;width:14px;height:14px;background:var(--surface);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}.rag-assistant-label{position:relative;display:flex;align-items:center;gap:7px;margin-bottom:11px;color:var(--green-800);font-size:12px;font-weight:850}.rag-assistant-label::before{content:'⌕';display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:#e2f2e7;color:var(--green-800);font-size:14px}.rag-turn-loading .rag-assistant-card{background:var(--surface-soft)}
 .rag-answer-empty{padding:36px 12px;text-align:center;color:var(--muted);font-size:12px;line-height:1.65}
-.rag-start{padding:8px 0}.rag-start h3{margin:0;color:var(--ink);font-size:21px}.rag-start p{margin:7px 0 18px;color:var(--muted);font-size:13.5px}.rag-start-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
-.rag-starter{position:relative;min-height:66px;border:1px solid var(--line);border-radius:15px;background:var(--surface);color:var(--muted);padding:13px 15px;text-align:left;font:750 13.5px/1.45 var(--font);cursor:pointer;box-shadow:0 4px 14px rgba(11,59,37,.06);transition:all .18s}.rag-starter:hover{transform:translateY(-2px);border-color:var(--green-600);color:var(--green-800);box-shadow:0 8px 18px rgba(11,59,37,.12)}
+.rag-start{padding:8px 0}.rag-start h3{margin:0;color:var(--ink);font-size:21px}.rag-start p{margin:7px 0 18px;color:var(--muted);font-size:13.5px}.rag-start-grid{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.rag-starter{position:relative;flex:0 0 auto;white-space:nowrap;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);padding:11px 16px;text-align:left;font:750 13px var(--font);cursor:pointer;box-shadow:0 4px 14px rgba(11,59,37,.06);transition:all .18s}.rag-starter:hover{transform:translateY(-2px);border-color:var(--green-600);color:var(--green-800);box-shadow:0 8px 18px rgba(11,59,37,.12)}
 .rag-answer h3{margin:0 0 8px;color:var(--ink);font-size:18px;font-weight:850}
 .rag-basis{font-size:18px;font-weight:850}.rag-basis-blue{color:var(--green-700)}.rag-basis-green{color:#247a60}
 .rag-answer-summary{margin:0 0 14px;color:var(--ink2);font-size:14px;line-height:1.65}
@@ -2946,7 +2946,7 @@
 .rag-send{width:42px;height:42px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--green-950),var(--green-600));color:#fff;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;transition:opacity .15s,transform .15s}
 .rag-send:hover{opacity:.9}
 .rag-compose-tools{display:flex;align-items:center;gap:8px;margin-top:9px}.rag-hint{margin-left:auto;color:var(--muted);font-size:11px;text-align:right}
-@media(max-width:760px){.rag-launch{right:14px;bottom:14px}.tkp-natural-drawer{top:8px!important;right:8px!important;bottom:8px!important;left:auto!important;width:calc(100vw - 16px)!important;min-width:0!important;max-width:none!important;height:auto!important}.rag-start-grid{grid-template-columns:1fr}.rag-body{padding:15px}.rag-assistant-card{width:100%;padding:15px}.rag-user-pill{max-width:88%}.rag-kpis{grid-template-columns:1fr}.rag-hint{display:none}}
+@media(max-width:760px){.rag-launch{right:14px;bottom:14px}.tkp-natural-drawer{top:8px!important;right:8px!important;bottom:8px!important;left:auto!important;width:calc(100vw - 16px)!important;min-width:0!important;max-width:none!important;height:auto!important}.rag-body{padding:15px}.rag-assistant-card{width:100%;padding:15px}.rag-user-pill{max-width:88%}.rag-kpis{grid-template-columns:1fr}.rag-hint{display:none}}
   </style>
 <meta name="robots" content="noindex,nofollow">
 </head>
@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">v06</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">v07</div>
     </aside>
 
     <main>
@@ -6155,12 +6155,12 @@ window.INVENTORY_LOCK=(()=>{
             </div>
             <div class="rag-section-title">전월 대비</div>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>금액</th><th>전월 대비</th></tr></thead><tbody>
-              <tr><td>전체 재고</td><td class="rag-amt">${fmtMoney(inv)}</td>${deltaCell(inv, previous(data.inventory))}</tr>
-              <tr><td>일반 재고</td><td class="rag-amt">${fmtMoney(normal)}</td>${deltaCell(normal, previous(data.normal))}</tr>
-              <tr><td>부동 3개월</td><td class="rag-amt">${fmtMoney(r3)}</td>${deltaCell(r3, previous(data.risk3))}</tr>
-              <tr><td>부동 6개월</td><td class="rag-amt">${fmtMoney(r6)}</td>${deltaCell(r6, previous(data.risk6))}</tr>
-              <tr><td>부동 12개월</td><td class="rag-amt">${fmtMoney(r12)}</td>${deltaCell(r12, previous(data.risk12))}</tr>
-              <tr><td>미판매 재고</td><td class="rag-amt">${fmtMoney(unsold)}</td>${deltaCell(unsold, previous(data.unsold))}</tr>
+              <tr><td><b>전체 재고</b></td><td class="rag-amt">${fmtMoney(inv)}</td>${deltaCell(inv, previous(data.inventory))}</tr>
+              <tr><td><b>일반 재고</b></td><td class="rag-amt">${fmtMoney(normal)}</td>${deltaCell(normal, previous(data.normal))}</tr>
+              <tr><td><b>부동 3개월</b></td><td class="rag-amt">${fmtMoney(r3)}</td>${deltaCell(r3, previous(data.risk3))}</tr>
+              <tr><td><b>부동 6개월</b></td><td class="rag-amt">${fmtMoney(r6)}</td>${deltaCell(r6, previous(data.risk6))}</tr>
+              <tr><td><b>부동 12개월</b></td><td class="rag-amt">${fmtMoney(r12)}</td>${deltaCell(r12, previous(data.risk12))}</tr>
+              <tr><td><b>미판매 재고</b></td><td class="rag-amt">${fmtMoney(unsold)}</td>${deltaCell(unsold, previous(data.unsold))}</tr>
             </tbody></table></div>
             ${typeof turnover === "number" ? `<div class="rag-section-title">회전율</div><p class="rag-answer-summary">전체 평균 회전율 ${turnover.toFixed(2)}</p>` : ""}
             ${followups(["부동·체화재고 현황", "재고 많은 조직 5개", "상품 회전율", "미판매 재고 얼마"])}`;
@@ -6184,6 +6184,29 @@ window.INVENTORY_LOCK=(()=>{
           const org = data.orgs[name];
           const value = current(org.inventory), prev = previous(org.inventory);
           const share = value / (current(data.inventory) || 1) * 100;
+          const teams = selectedOrganizationTeams(name);
+          const accountTypes = ["상품", "제품", "원부자재"];
+          const categoryRows = accountTypes.map(type => {
+            const series = aggregateTeamSeries(teams, team => {
+              const categories = data.orgAnalysis.categoriesByTeam[team]?.[type] || {};
+              return data.months.map((_, index) => Object.values(categories).reduce((sum, arr) => sum + Number(arr[index] || 0), 0));
+            });
+            return { type, value: current(series) };
+          });
+          const statusKeys = ["일반", "3개월", "6개월", "12개월", "미판매"];
+          const statusRows = statusKeys.map(status => {
+            const series = aggregateTeamSeries(teams, team => data.orgAnalysis.statusByTeam[team]?.[status]);
+            const v = current(series);
+            return { status, value: v, pct: value ? (v / value * 100) : 0 };
+          });
+          const trendSpan = 6;
+          const trendRows = [];
+          for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
+            trendRows.push({ month: data.months[i], value: org.inventory[i] || 0 });
+          }
+          const categoryTableRows = categoryRows.map(r => `<tr><td><b>${escHtml(r.type)}</b></td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
+          const statusTableRows = statusRows.map(r => `<tr><td><b>${escHtml(r.status)}</b></td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${r.pct.toFixed(1)}%</td></tr>`).join("");
+          const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(org.label)} <span class="rag-basis rag-basis-blue">재고 현황</span></h3>
             <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
             ${chips([data.months[state.month], org.label])}
@@ -6192,7 +6215,13 @@ window.INVENTORY_LOCK=(()=>{
               <div class="rag-kpi"><span>전체 비중</span><b>${share.toFixed(1)}%</b></div>
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
             </div>
-            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}`;
+            <div class="rag-section-title">상품·제품·원부자재 구성</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th></tr></thead><tbody>${categoryTableRows}</tbody></table></div>
+            <div class="rag-section-title">재고 상태 구성 (부동·체화 비중)</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
+            <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
+            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
         }
 
         function renderOrgRank(direction, limit) {
