@@ -6213,7 +6213,7 @@ window.INVENTORY_LOCK=(()=>{
         function renderOrgRank(direction, limit) {
           const rows = orgNames().map(name => ({ name: data.orgs[name].label, value: current(data.orgs[name].inventory) }))
             .sort((a, b) => direction === "asc" ? a.value - b.value : b.value - a.value).slice(0, limit);
-          const body = rows.map((row, i) => `<tr><td><span class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</span></td><td class="rag-amt">${fmtMoney(row.value)}</td></tr>`).join("");
+          const body = rows.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>조직별 재고 ${direction === "asc" ? "적은" : "많은"} 순 <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>재고액</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
@@ -6246,7 +6246,7 @@ window.INVENTORY_LOCK=(()=>{
               const av = isTurnover ? a.turnover : a.value, bv = isTurnover ? b.turnover : b.value;
               return direction === "asc" ? av - bv : bv - av;
             }).slice(0, limit);
-          const body = sorted.map((row, i) => `<tr><td><span class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</span></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover != null ? row.turnover.toFixed(2) : "-"}</td></tr>`).join("");
+          const body = sorted.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover != null ? row.turnover.toFixed(2) : "-"}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(mode)} ${isTurnover ? "회전율" : "재고액"} ${direction === "asc" ? "낮은" : "높은"} 순 <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body || "<tr><td colspan=\"3\">자료 없음</td></tr>"}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}`;
@@ -6258,7 +6258,7 @@ window.INVENTORY_LOCK=(()=>{
             const turnover = info.turnover[state.month];
             return { name: e.name, mode: e.mode, value: current(info.inventory), turnover: typeof turnover === "number" ? turnover.toFixed(2) : "-" };
           });
-          const body = rows.map(row => `<tr><td><span class="rag-item-name" title="${escHtml(row.name)}">${escHtml(row.name)}</span><br><small>${escHtml(row.mode)}</small></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover}</td></tr>`).join("");
+          const body = rows.map(row => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${escHtml(row.name)}</b><br><small>${escHtml(row.mode)}</small></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover}</td></tr>`).join("");
           answer.innerHTML = `<h3>${rows.map(r => escHtml(r.name)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}`;
