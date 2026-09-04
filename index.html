@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">v07</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">v08</div>
     </aside>
 
     <main>
@@ -6237,6 +6237,12 @@ window.INVENTORY_LOCK=(()=>{
           const info = data.categoryFlows[entry.mode][entry.name];
           const value = current(info.inventory), prev = previous(info.inventory);
           const turnover = info.turnover[state.month];
+          const trendSpan = 6;
+          const trendRows = [];
+          for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
+            trendRows.push({ month: data.months[i], value: info.inventory[i] || 0 });
+          }
+          const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(entry.name)} <span class="rag-basis rag-basis-blue">(${entry.mode})</span></h3>
             <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
             ${chips([data.months[state.month], entry.mode, entry.name])}
@@ -6245,6 +6251,8 @@ window.INVENTORY_LOCK=(()=>{
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
               <div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "-"}</b></div>
             </div>
+            <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}`;
         }
 
@@ -6315,6 +6323,12 @@ window.INVENTORY_LOCK=(()=>{
 
         function renderItem(product) {
           const value = current(product.values), prev = previous(product.values);
+          const trendSpan = 6;
+          const trendRows = [];
+          for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
+            trendRows.push({ month: data.months[i], value: product.values[i] || 0 });
+          }
+          const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(product.name)} <span class="rag-basis rag-basis-blue">(${escHtml(product.code)})</span></h3>
             <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
             ${chips([data.months[state.month], product.type, product.group, product.status])}
@@ -6323,6 +6337,8 @@ window.INVENTORY_LOCK=(()=>{
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
               <div class="rag-kpi"><span>재고상태</span><b>${escHtml(product.status)}</b></div>
             </div>
+            <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["부동·체화재고 현황", "이번 달 전체 재고 얼마"])}`;
         }
 
@@ -6371,6 +6387,10 @@ window.INVENTORY_LOCK=(()=>{
             return true;
           }
           if (/(부동|체화|3\s*개월|6\s*개월|12\s*개월)/.test(t) && !/회전율/.test(t)) { renderAging(); return true; }
+          if (/전월\s*대비/.test(t) && /재고/.test(t) && !ranked) {
+            const orgMentioned = matchOrg(t), categoryMentioned = matchCategory(t);
+            if (!orgMentioned && !categoryMentioned) { renderOverall(); return true; }
+          }
           if (/(개발\s*(및|&)?\s*프로젝트|프로젝트\s*현황)/.test(t)) { renderDevProjectOverview(); return true; }
 
           if (/비교/.test(t)) {
