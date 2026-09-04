@@ -6520,6 +6520,13 @@ ${connectionOnly ? "" : ""}`;
           renderUnknown(original);
         }
 
+        function runLocal(q, base) {
+          let ok = false;
+          try { ok = render(q); } catch (error) { console.error(error); ok = false; }
+          if (!ok) renderUnknown(q);
+          finishTurn(base, q);
+        }
+
         async function handleQuestion(question) {
           const q = String(question || "").trim();
           if (!q) return;
@@ -6527,23 +6534,21 @@ ${connectionOnly ? "" : ""}`;
           const base = chatHtml;
           input.value = "";
           suggestions.hidden = true; suggestions.innerHTML = "";
-          let ok = false;
-          try { ok = render(q); } catch (error) { console.error(error); ok = false; }
-          if (ok) { finishTurn(base, q); return; }
           const pass = apiKeyInput.value.trim();
-          if (!pass) { renderUnknown(q); finishTurn(base, q); return; }
+          if (!pass) { runLocal(q, base); return; }
           const stopLoading = startLoading(base, q);
           try {
             const command = await callGemini(q, false);
             stopLoading();
             executeCommand(command, q);
+            finishTurn(base, q);
           } catch (error) {
             stopLoading();
             const message = friendlyError(error);
             setApiState(message, "bad");
-            answer.innerHTML = `<h3>AI 질문 처리 실패</h3><p class="rag-answer-summary">${escHtml(message)}</p>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
+            answer.innerHTML = `<h3>AI 질문 처리 실패</h3><p class="rag-answer-summary">${escHtml(message)}</p>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}<button type="button" class="rag-choice rag-local-fallback" data-fallback-q="${escHtml(q)}">이 질문을 로컬 규칙으로 실행</button>`;
+            finishTurn(base, q);
           }
-          finishTurn(base, q);
         }
 
         settingsButton.addEventListener("click", () => apiPanel.classList.toggle("open"));
@@ -6580,6 +6585,8 @@ ${connectionOnly ? "" : ""}`;
         backBtn.addEventListener("click", restorePrevious);
         resetBtn.addEventListener("click", resetConversation);
         answer.addEventListener("click", event => {
+          const fallback = event.target.closest(".rag-local-fallback");
+          if (fallback) { runLocal(fallback.dataset.fallbackQ || "", chatHtml); return; }
           const starter = event.target.closest(".rag-starter");
           if (starter) { handleQuestion(starter.textContent); return; }
           const clarify = event.target.closest("[data-clarify]");
