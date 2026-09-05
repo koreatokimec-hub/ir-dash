@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">v11</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">v12</div>
     </aside>
 
     <main>
@@ -6373,7 +6373,7 @@ window.INVENTORY_LOCK=(()=>{
           if (!t) return false;
           // 되묻기(clarification) 알약 클릭 전용: "이름 (라벨)" 형태는 AI 없이 바로 확정한다.
           // 같은 이름이 여러 구분(제품/원부자재 등)에 겹칠 때, AI가 매번 다시 되묻는 걸 막는다.
-          const clarifyMatch = t.match(/^(.+?)\s*\((상품|제품|원부자재|조직)\)\s*$/);
+          const clarifyMatch = t.match(/^(.+?)\s*\((상품|제품|원부자재|조직)\)\s*$/) || (m => m && [m[0], m[2], m[1]])(t.match(/^(상품|제품|원부자재|조직)\s*[:：]\s*(.+)$/));
           if (clarifyMatch) {
             const clarifyName = clarifyMatch[1].trim(), clarifyLabel = clarifyMatch[2];
             if (clarifyLabel === "조직") {
@@ -6496,7 +6496,7 @@ metric: inventory(재고액) 또는 turnover(회전율). 질문에 회전율이 
 direction: 상위/많은/높은=desc, 하위/적은/낮은/최저/최악/꼴찌=asc.
 limit: 몇 개 보여줄지(없으면 5, "1위"·"꼴찌"면 1).
 needs_clarification: 대상이 목록 중 무엇인지 도저히 특정 못 하면 true로 하고 clarification에 되물을 말을 넣어라. 그 외엔 false.
-clarification_options: needs_clarification이 true일 때만, 사용자가 버튼으로 바로 고를 수 있도록 실제 후보 항목 문구를 2~6개 배열로 넣어라 (예: 이름이 "제품"과 "원부자재"에 동시에 있는 "건기"라면 ["건기 (제품)","건기 (원부자재)"]처럼). 그 외엔 빈 배열.
+clarification_options: needs_clarification이 true일 때만, 사용자가 버튼으로 바로 고를 수 있도록 실제 후보 항목 문구를 2~6개 배열로 넣어라. 형식은 반드시 "이름 (구분)"으로만 써라 — "구분:이름"처럼 콜론 형식은 쓰지 마라 (예: 이름이 "제품"과 "원부자재"에 동시에 있는 "건기"라면 ["건기 (제품)","건기 (원부자재)"]처럼, 조직이면 "건기시스템 (조직)"처럼). 그 외엔 빈 배열.
 ${connectionOnly ? "" : ""}`;
           const schema = { type: "OBJECT", properties: {
             dimension: { type: "STRING", enum: ["overall", "org", "orgRank", "category", "categoryRank", "compare", "aging", "item", "devProject", "unknown"] },
