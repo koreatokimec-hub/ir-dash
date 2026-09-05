@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">v13</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">v14</div>
     </aside>
 
     <main>
@@ -6015,12 +6015,19 @@ window.INVENTORY_LOCK=(()=>{
 
         const orgNames = () => Object.keys(data.orgs).filter(name => name !== "전체");
         const shortOrg = label => norm(label).replace(/시스템|사업|영업|기술/g, "");
-        function matchOrg(text) {
+        function matchOrgStrict(text) {
+          // fuzzy(dice) 단계는 빼고 정확/축약 일치만 본다 — 되묻기 알약에 조직 후보를
+          // 자동으로 끼워 넣을 때 엉뚱한 조직이 딸려오지 않도록 하기 위함.
           const normalized = norm(text);
           const exact = orgNames().find(name => normalized.includes(norm(data.orgs[name].label)));
           if (exact) return exact;
           const short = orgNames().find(name => shortOrg(data.orgs[name].label).length >= 2 && normalized.includes(shortOrg(data.orgs[name].label)));
           if (short) return short;
+          return null;
+        }
+        function matchOrg(text) {
+          const strict = matchOrgStrict(text);
+          if (strict) return strict;
           let best = null, bestScore = 0;
           orgNames().forEach(name => { const s = diceScore(text, data.orgs[name].label); if (s > bestScore) { bestScore = s; best = name; } });
           return bestScore >= 0.34 ? best : null;
@@ -6529,7 +6536,16 @@ ${connectionOnly ? "" : ""}`;
         }
         function executeCommand(command, original) {
           if (command.needs_clarification) {
-            const clarifyOptions = Array.isArray(command.clarification_options) ? command.clarification_options.filter(Boolean) : [];
+            let clarifyOptions = Array.isArray(command.clarification_options) ? command.clarification_options.filter(Boolean) : [];
+            // AI가 되묻기 후보에서 조직명을 빼먹을 때가 있어, 정확/축약 일치하는 조직이
+            // 있으면 로컬에서 확실하게 채워 넣는다 (fuzzy 단계는 오탐 우려로 안 씀).
+            const orgGuess = matchOrgStrict(original);
+            if (orgGuess) {
+              const orgLabel = data.orgs[orgGuess].label;
+              if (!clarifyOptions.some(opt => norm(opt).includes(norm(orgLabel)))) {
+                clarifyOptions = [...clarifyOptions, `${orgLabel} (조직)`];
+              }
+            }
             answer.innerHTML = `<h3>조건을 확인해 주세요</h3><p class="rag-answer-summary">${escHtml(command.clarification || "어떤 기준으로 조회할까요?")}</p>${followups(clarifyOptions.length ? clarifyOptions : ["이번 달 전체 재고 얼마", "재고 많은 조직 5개"])}`;
             return;
           }
