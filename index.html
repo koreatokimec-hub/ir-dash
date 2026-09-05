@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a5</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a6</div>
     </aside>
 
     <main>
@@ -6170,7 +6170,7 @@ window.INVENTORY_LOCK=(()=>{
               <tr><td><b>미판매 재고</b></td><td class="rag-amt">${fmtMoney(unsold)}</td>${deltaCell(unsold, previous(data.unsold))}</tr>
             </tbody></table></div>
             ${typeof turnover === "number" ? `<div class="rag-section-title">회전율</div><p class="rag-answer-summary">전체 평균 회전율 ${turnover.toFixed(2)}</p>` : ""}
-            ${followups(["부동·체화재고 현황", "재고 많은 조직 5개", "상품 회전율", "미판매 재고 얼마"])}`;
+            ${followups(["부동·체화재고 현황", "재고 많은 조직 5개", "상품 회전율", "미판매 재고 얼마"])}${gotoButton("overview", "전체 현황에서 보기")}`;
         }
 
         function renderAging() {
@@ -6184,7 +6184,7 @@ window.INVENTORY_LOCK=(()=>{
               <div class="rag-kpi"><span>12개월 이상</span><b>${fmtMoney(r12)}</b></div>
             </div>
             <p class="rag-answer-summary">합계 <b>${fmtMoney(total)}</b> · 전체 재고 대비 ${(total / (current(data.inventory) || 1) * 100).toFixed(1)}%</p>
-            ${followups(["이번 달 전체 재고 얼마", "재고 많은 조직 5개"])}`;
+            ${followups(["이번 달 전체 재고 얼마", "재고 많은 조직 5개"])}${gotoButton("overview", "전체 현황에서 보기")}`;
         }
 
         function renderOrg(name) {
@@ -6228,7 +6228,7 @@ window.INVENTORY_LOCK=(()=>{
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
             <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
-            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
+            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
         }
 
         function renderOrgRank(direction, limit) {
@@ -6237,7 +6237,7 @@ window.INVENTORY_LOCK=(()=>{
           const body = rows.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>조직별 재고 ${direction === "asc" ? "적은" : "많은"} 순 <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>재고액</th></tr></thead><tbody>${body}</tbody></table></div>
-            ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
+            ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
         }
 
         function renderCategory(entry) {
@@ -6260,7 +6260,7 @@ window.INVENTORY_LOCK=(()=>{
             </div>
             <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
-            ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}`;
+            ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
         function renderCategoryRank(mode, direction, limit, metric = "inventory") {
@@ -6278,7 +6278,7 @@ window.INVENTORY_LOCK=(()=>{
           const body = sorted.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover != null ? row.turnover.toFixed(2) : "-"}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(mode)} ${isTurnover ? "회전율" : "재고액"} ${direction === "asc" ? "낮은" : "높은"} 순 <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body || "<tr><td colspan=\"3\">자료 없음</td></tr>"}</tbody></table></div>
-            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}`;
+            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
         function renderCategoryCompare(entries) {
@@ -6290,7 +6290,7 @@ window.INVENTORY_LOCK=(()=>{
           const body = rows.map(row => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${escHtml(row.name)}</b><br><small>${escHtml(row.mode)}</small></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover}</td></tr>`).join("");
           answer.innerHTML = `<h3>${rows.map(r => escHtml(r.name)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
-            ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}`;
+            ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
         function renderOrgCompare(names) {
@@ -6302,7 +6302,7 @@ window.INVENTORY_LOCK=(()=>{
           answer.innerHTML = `<h3>${rows.map(r => escHtml(r.label)).join(" · ")} <span class="rag-basis rag-basis-blue">재고 비교 (${data.months[state.month]})</span></h3>
             <p class="rag-answer-summary">조직 단위는 회전율 자료가 없어 재고액만 비교합니다.</p>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>재고액</th></tr></thead><tbody>${body}</tbody></table></div>
-            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}`;
+            ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
         }
 
         function renderAccountTypeCompare(modes) {
@@ -6316,7 +6316,7 @@ window.INVENTORY_LOCK=(()=>{
           const body = rows.map(row => `<tr><td>${escHtml(row.mode)}</td><td class="rag-amt">${fmtMoney(row.inventory)}</td><td>${row.turnover}</td></tr>`).join("");
           answer.innerHTML = `<h3>${rows.map(r => escHtml(r.mode)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
-            ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}`;
+            ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
         function renderTurnoverMode(mode) {
@@ -6325,7 +6325,7 @@ window.INVENTORY_LOCK=(()=>{
           answer.innerHTML = `<h3>${escHtml(mode)} <span class="rag-basis rag-basis-blue">회전율</span></h3>
             <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
             <div class="rag-kpis"><div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "자료 없음"}</b></div></div>
-            ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}`;
+            ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
         function renderItem(product) {
@@ -6346,7 +6346,7 @@ window.INVENTORY_LOCK=(()=>{
             </div>
             <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
-            ${followups(["부동·체화재고 현황", "이번 달 전체 재고 얼마"])}`;
+            ${followups(["부동·체화재고 현황", "이번 달 전체 재고 얼마"])}${gotoButton("items", "품목별 재고에서 보기")}`;
         }
 
         function renderDevProjectOverview() {
@@ -6363,7 +6363,7 @@ window.INVENTORY_LOCK=(()=>{
               <div class="rag-kpi"><span>상품</span><b>${fmtMoney((total.goods || 0) / 1000000)}</b></div>
               <div class="rag-kpi"><span>원부자재</span><b>${fmtMoney((total.material || 0) / 1000000)}</b></div>
             </div><p class="rag-answer-summary">전체 소계 <b>${fmtMoney((total.subtotal || 0) / 1000000)}</b></p>` : ""}
-            ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
+            ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("devProjects", "개발&프로젝트에서 보기")}`;
         }
 
         function renderUnknown(text) {
@@ -6399,11 +6399,11 @@ window.INVENTORY_LOCK=(()=>{
             const orgMentioned = matchOrg(t), categoryMentioned = matchCategory(t);
             if (orgMentioned || categoryMentioned) {
               const target = orgMentioned ? data.orgs[orgMentioned].label : categoryMentioned.name;
-              answer.innerHTML = `<h3>${escHtml(target)} 미판매 재고</h3><p class="rag-answer-summary">미판매 재고는 조직·공급회사별로 나뉜 자료가 없고, 회사 전체 금액만 있습니다. 회사 전체 미판매 재고를 보여드릴까요?</p>${followups(["미판매 재고 얼마", "이번 달 전체 재고 얼마"])}`;
+              answer.innerHTML = `<h3>${escHtml(target)} 미판매 재고</h3><p class="rag-answer-summary">미판매 재고는 조직·공급회사별로 나뉜 자료가 없고, 회사 전체 금액만 있습니다. 회사 전체 미판매 재고를 보여드릴까요?</p>${followups(["미판매 재고 얼마", "이번 달 전체 재고 얼마"])}${gotoButton("overview", "전체 현황에서 보기")}`;
               return true;
             }
             const value = current(data.unsold);
-            answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">미판매 재고</span></h3><p class="rag-answer-summary">${data.months[state.month]} 기준 미판매 재고입니다. (조직·공급회사별로 나뉜 자료는 없고, 회사 전체 금액입니다)</p><div class="rag-kpis"><div class="rag-kpi"><span>미판매 재고</span><b>${fmtMoney(value)}</b></div></div>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}`;
+            answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">미판매 재고</span></h3><p class="rag-answer-summary">${data.months[state.month]} 기준 미판매 재고입니다. (조직·공급회사별로 나뉜 자료는 없고, 회사 전체 금액입니다)</p><div class="rag-kpis"><div class="rag-kpi"><span>미판매 재고</span><b>${fmtMoney(value)}</b></div></div>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("overview", "전체 현황에서 보기")}`;
             return true;
           }
           if (/(부동|체화|3\s*개월|6\s*개월|12\s*개월)/.test(t) && !/회전율/.test(t)) { renderAging(); return true; }
@@ -6447,7 +6447,7 @@ window.INVENTORY_LOCK=(()=>{
             const turnoverCore = t.replace(/이번\s*달|이번|당월|지금|좀|알려줘|말해줘|보여줘|얼마나|얼마|정도|가장|제일|낮은|높은|낮|높|안\s*좋은|좋은|나쁜|것|거|뭐임|뭐야|무엇|뭐|[?!]/g, "").replace(/\s+/g, "");
             if (turnoverCore === "회전율" || turnoverCore === "전체회전율") {
               const turnover = data.turnover[state.month];
-              answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">전체 회전율</span></h3><div class="rag-kpis"><div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "자료 없음"}</b></div></div>${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}`;
+              answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">전체 회전율</span></h3><div class="rag-kpis"><div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "자료 없음"}</b></div></div>${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
               return true;
             }
           }
