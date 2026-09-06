@@ -2978,7 +2978,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a6</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a7</div>
     </aside>
 
     <main>
@@ -6003,6 +6003,30 @@ window.INVENTORY_LOCK=(()=>{
         if (typeof window.TKP_DASH_PASS === "string" && window.TKP_DASH_PASS) apiKeyInput.value = window.TKP_DASH_PASS;
         const setApiState = (message, state = "") => { apiState.textContent = message; apiState.className = "rag-api-state" + (state ? " " + state : ""); };
         if (apiKeyInput.value.trim()) setApiState("대시보드 암호를 자동으로 연결했습니다 · 바로 질문해 보세요.", "ok");
+        /* "연결 설정"(암호 입력칸)은 기본적으로 숨긴다 — 아무나 API 설정을 건드리면 안 되므로,
+           좌하단 버전 표시(devModeTrigger)를 2초 안에 7번 눌러야 볼 수 있다.
+           단, 암호 자동주입이 실패해 키가 비어 있으면 챗봇이 먹통이 되지 않도록 예외로 열어 둔다. */
+        let settingsUnlocked = false;
+        function syncSettingsGate() {
+          const on = settingsUnlocked || !apiKeyInput.value.trim();
+          settingsButton.hidden = !on;
+          if (!on) apiPanel.classList.remove("open");
+        }
+        syncSettingsGate();
+        (function () {
+          const trigger = document.getElementById("devModeTrigger");
+          if (!trigger) return;
+          let count = 0, timer = null;
+          trigger.addEventListener("click", () => {
+            count++; clearTimeout(timer);
+            timer = setTimeout(() => { count = 0; }, 2000); /* 2초 안에 연달아 7번 눌러야 인정 */
+            if (count >= 7) {
+              count = 0;
+              settingsUnlocked = !settingsUnlocked;
+              syncSettingsGate();
+            }
+          });
+        })();
         let geminiBusy = false;
         const friendlyError = error => String((error && error.message) || error || "AI 연결 오류").replace(/Gemini/gi, "AI").replace(/generativelanguage\.googleapis\.com/gi, "AI API");
         const defaultSuggestions = suggestions.innerHTML;
@@ -6130,11 +6154,7 @@ window.INVENTORY_LOCK=(()=>{
           return `<td class="${cls}">${sign}${fmtMoney(Math.abs(diff))}${pct != null ? ` (${sign}${Math.abs(pct).toFixed(1)}%)` : ""}</td>`;
         }
 
-        const starterPool = [
-          "이번 달 전체 재고 얼마", "전월 대비 재고 변화", "부동·체화재고 현황", "이번 달 회전율 얼마",
-          "재고 많은 조직 5개", "재고 적은 조직 5개", "상품 회전율", "제품 회전율", "원부자재 회전율",
-          "미판매 재고 얼마", "개발 및 프로젝트 현황"
-        ];
+        const starterPool = ["재고 많은 조직 5개", "전월 대비 재고 변화", "부동·체화재고 현황"];
         function startHtml() {
           return `<div class="rag-start"><h3>무엇을 확인할까요?</h3><p>검증된 예시 질문을 선택하거나 아래에 직접 입력하세요.</p><div class="rag-start-grid">${starterPool.map(q => `<button class="rag-starter" type="button">${q}</button>`).join("")}</div></div>`;
         }
