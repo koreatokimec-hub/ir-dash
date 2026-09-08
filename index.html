@@ -2934,6 +2934,9 @@
 .rag-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:11px;background:var(--card);margin-bottom:8px}
 .rag-table{width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap}
 .rag-table th,.rag-table td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:right}
+.rag-table-compact{width:auto;min-width:230px}
+.rag-table-compact th:first-child,.rag-table-compact td:first-child{text-align:left}
+.rag-table-compact td:first-child b{font-size:15.5px}
 .rag-table th{position:sticky;top:0;background:var(--bg);color:var(--muted);font-weight:750}
 .rag-table th:first-child,.rag-table td:first-child{text-align:left}
 .rag-table td.l{text-align:left}.rag-item-name{display:inline-block;max-width:230px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
@@ -2980,7 +2983,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a13</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a14</div>
     </aside>
 
     <main>
@@ -6331,9 +6334,9 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
             </div>
             <div class="rag-section-title">상품·제품·원부자재 구성</div>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th></tr></thead><tbody>${categoryTableRows}</tbody></table></div>
+            <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th></tr></thead><tbody>${categoryTableRows}</tbody></table></div>
             <div class="rag-section-title">재고 상태 구성 (부동·체화 비중)</div>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
+            <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
             <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
@@ -6442,9 +6445,9 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
             const inventory = Object.values(data.categoryFlows[mode] || {}).reduce((sum, info) => sum + current(info.inventory), 0);
             return { mode, inventory, turnover: typeof turnover === "number" ? turnover.toFixed(2) : "-" };
           });
-          const body = rows.map(row => `<tr><td>${escHtml(row.mode)}</td><td class="rag-amt">${fmtMoney(row.inventory)}</td><td>${row.turnover}</td></tr>`).join("");
+          const body = rows.map(row => `<tr><td><b>${escHtml(row.mode)}</b></td><td class="rag-amt">${fmtMoney(row.inventory)}</td><td>${row.turnover}</td></tr>`).join("");
           answer.innerHTML = `<h3>${rows.map(r => escHtml(r.mode)).join(" · ")} <span class="rag-basis rag-basis-blue">${list.length === 1 ? '재고 현황' : '비교'} (${data.months[state.month]})</span></h3>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>구분</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
+            <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
