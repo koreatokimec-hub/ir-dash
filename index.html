@@ -2980,7 +2980,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a9</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a10</div>
     </aside>
 
     <main>
@@ -6202,8 +6202,11 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
 금액 구성이 크다는 사실만으로 그 항목이 증가를 주도했다고 쓰지 않는다. 해당 항목의 전월 증감이 제공된 경우에만 증감 기여를 설명한다. 원인을 묻지 않았는데 매번 자료 부족 문장을 덧붙이지 않는다.
 마크다운 제목, 별표, 글머리 기호를 쓰지 않는다. 인사말, 근거 없는 조언, 견조한 흐름·사업적 요인 같은 막연한 표현은 생략한다.`;
         function inventorySeriesEvidence(series) {
-          return data.months.slice(Math.max(0, state.month - 11), state.month + 1).map((month, offset) => {
-            const index = Math.max(0, state.month - 11) + offset;
+          /* 12개월(최근 1년)만 자르면 "전년 동월"이 딱 한 달 차이로 창 밖에 걸러진다
+             (예: 2026-07 기준으로 12개월을 자르면 2025-08부터 잡혀 정확한 2025-07이 빠짐).
+             13개월로 넉넉히 잡아 진짜 전년 동월이 항상 포함되게 한다. */
+          return data.months.slice(Math.max(0, state.month - 12), state.month + 1).map((month, offset) => {
+            const index = Math.max(0, state.month - 12) + offset;
             return { month, ...Object.fromEntries(Object.entries(series).map(([key, values]) => {
               const monetary = !/turnover/i.test(key), value = values?.[index];
               return [monetary ? key + '(억원)' : key, typeof value === 'number' ? (monetary ? +(value / 100).toFixed(4) : value) : null];
@@ -6729,19 +6732,10 @@ ${connectionOnly ? "" : ""}`;
             finishTurn(base, q);
             return;
           }
-          /* 재고 데이터는 보유 월(data.months[0])부터만 쌓여 있고 그 이전은 아예 없다.
-             "작년 대비" 같은 질문을 AI에 그대로 넘기면, 없는 과거 숫자를 그럴듯하게
-             지어내는 일이 있었다(예: 없는 2025년 수치를 만들어 비교). AI를 부르기 전에
-             로컬에서 먼저 걸러 확실한 안내만 보여준다. */
-          const earliestYear = +String(data.months[0] || "").slice(0, 4);
-          const askedYearMatch = q.match(/20\d{2}(?=\s*년)/);
-          const priorPeriodAsk = /작년|전년|지난\s*해|재작년|과년도|전기\s*대비/.test(q)
-            || (askedYearMatch && +askedYearMatch[0] < earliestYear);
-          if (priorPeriodAsk) {
-            answer.innerHTML = `<h3>${escHtml(q)}</h3><p class="rag-answer-summary">재고 데이터는 ${escHtml(data.months[0])}부터 새로 쌓이기 시작해서, 그 이전(작년 등) 자료는 없습니다. 과거 데이터는 아직 준비 중이며, 지금은 ${escHtml(data.months[0])} ~ ${escHtml(data.months[data.months.length - 1])} 기간 안에서만 비교할 수 있습니다.</p>${followups(["재고 많은 조직 5개", "전월 대비 재고 변화", "부동·체화재고 현황"])}`;
-            finishTurn(base, q);
-            return;
-          }
+          /* 보유 기간(data.months[0] ~ 마지막) 밖을 물으면 지어내지 말고 없다고만 답하도록
+             INVENTORY_INSIGHT_RULES + evidence.dataRange로 AI 단계에서 막는다.
+             "작년 대비"류를 여기서 무조건 차단하지는 않는다 — 실제로 여러 해 데이터가
+             쌓여 있어(예: 2024-09~) 정말 답변 가능한 경우가 많기 때문이다. */
           inventoryQuestionBusy = true;
           const stopLoading = startLoading(base, q);
           try {
