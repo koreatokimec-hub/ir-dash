@@ -2980,7 +2980,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a12</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a13</div>
     </aside>
 
     <main>
@@ -6114,7 +6114,15 @@ window.INVENTORY_LOCK=(()=>{
         }
         function matchOrgs(text) {
           const normalized = norm(text);
-          const exact = orgNames().filter(name => normalized.includes(norm(data.orgs[name].label)));
+          let exact = orgNames().filter(name => normalized.includes(norm(data.orgs[name].label)));
+          /* "영업"처럼 짧은 조직명이 "충청영업"·"FA기술영업"처럼 다른 조직명 뒤에 그냥
+             붙어 있을 뿐인데 별도 대상으로 잡혀 비교에 끼어드는 문제가 있었다(예: "산기
+             시스템이랑 충청영업 비교"에 "영업"이 끼어듦). 더 긴 매치의 부분 문자열일
+             뿐인 짧은 매치는 버린다. */
+          exact = exact.filter(name => {
+            const label = norm(data.orgs[name].label);
+            return !exact.some(other => other !== name && norm(data.orgs[other].label).includes(label));
+          });
           if (exact.length) return exact;
           return orgNames().filter(name => shortOrg(data.orgs[name].label).length >= 2 && normalized.includes(shortOrg(data.orgs[name].label)));
         }
