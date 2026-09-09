@@ -2932,10 +2932,12 @@
 .rag-goto{display:inline-flex;align-items:center;gap:6px;margin-top:12px;border:1px solid var(--green-600);border-radius:999px;background:color-mix(in srgb,var(--green-600) 8%,var(--card));color:var(--green-800);padding:8px 15px;font:800 12px var(--font);cursor:pointer}
 .rag-goto:hover{background:var(--green-600);color:#fff}
 .rag-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:11px;background:var(--card);margin-bottom:8px}
-.rag-table{width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap}
-/* 본문 대시보드의 표에 붙는 태그 없는 td{font-size:10px}·th{font-size:9px} 전역 리셋이
-   여기(챗봇 표)에도 그대로 새어 들어와, 위에서 아무리 폰트 크기를 키워도 셀 안 글자만
-   계속 작게 남는 문제가 있었다. 여기서 td/th에 직접 지정해 그 리셋을 확실히 덮어쓴다. */
+.rag-table{width:100%;min-width:0;border-collapse:collapse;font-size:14px;white-space:nowrap}
+/* 본문 대시보드의 표에 붙는 태그 없는 table{min-width:720px}·td{font-size:10px}·
+   th{font-size:9px} 전역 리셋이 여기(챗봇 표)에도 그대로 새어 들어온다. min-width:720px가
+   좁은(모바일) 화면에서 표를 억지로 넓혀 "재고액" 같은 뒤 칸이 화면 밖으로 밀려나
+   안 보이는 것처럼 되는 문제가 있었다 — min-width:0으로 덮어써서 컨테이너 폭에 맞춘다.
+   글자 크기 리셋도 마찬가지로 아래에서 td/th에 직접 지정해 덮어쓴다. */
 .rag-table th,.rag-table td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:right;font-size:15.5px}
 .rag-table th{font-size:13px}
 .rag-table-compact th:first-child,.rag-table-compact td:first-child{text-align:left}
@@ -2985,7 +2987,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a17</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a18</div>
     </aside>
 
     <main>
