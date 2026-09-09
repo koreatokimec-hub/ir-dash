@@ -2987,7 +2987,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a18</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a20</div>
     </aside>
 
     <main>
@@ -3483,6 +3483,43 @@ window.INVENTORY_LOCK=(()=>{
             keys.add(`${row.accountType}|${row.category}`);
           });
         });
+        /* 업체·제품군 화면엔 재고액·회전율만 있고 3/6/12개월 부동재고 구간이 없었다.
+           categoryFlowMonthly(사전 집계본)엔 그 구간이 아예 없지만, 원본 품목별 자료
+           (itemMonthly)엔 품목마다 재고상태(inventoryStatus, 실제 값은 "일반재고"·
+           "부동재고3"·"부동재고6"·"부동재고12"·"미판매" 식이다 — "3개월"이 아니다)가
+           있으므로 여기서 직접 업체·제품군 단위로 다시 집계한다.
+           품목 → 업체·제품군 매칭은 buildProducts()가 쓰는 것과 똑같이 resolveFlow()로
+           해야 한다 — 품목 자체의 category/finalCategory 문자열과 categoryFlowMonthly의
+           category 키 표기가 다를 수 있다(예: 품목 쪽 "WALVOIL" ↔ 흐름표 쪽 "WALVOIL (KR)").
+           직접 문자열을 맞추면 하나도 안 걸린다. */
+        const codeMap = buildCategoryCodeMap(details);
+        const bucketOf = item => {
+          const raw = `${item.inventoryStatus || ""} ${item.agingBucket || ""}`;
+          if (/12개월|부동재고12/.test(raw)) return "12개월";
+          if (/6개월|부동재고6/.test(raw)) return "6개월";
+          if (/3개월|부동재고3/.test(raw)) return "3개월";
+          if (/미판매/.test(raw)) return "미판매";
+          return "일반";
+        };
+        const statusTotals = {}; // statusTotals[type][category][bucket] = 월별 합계(raw amount) 배열
+        months.forEach((_, index) => {
+          (details[index].itemMonthly || []).forEach(item => {
+            const type = normalizeAccountType(item.accountType);
+            const finalCategory = String(item.finalCategory ?? "").trim();
+            const category = String(item.category ?? "").trim();
+            const flow = resolveFlow(codeMap, type, finalCategory, category);
+            if (!flow) return;
+            const bucket = bucketOf(item);
+            if (!statusTotals[flow.type]) statusTotals[flow.type] = {};
+            if (!statusTotals[flow.type][flow.category]) statusTotals[flow.type][flow.category] = {};
+            if (!statusTotals[flow.type][flow.category][bucket]) statusTotals[flow.type][flow.category][bucket] = new Array(months.length).fill(0);
+            statusTotals[flow.type][flow.category][bucket][index] += Number(item.amount || 0);
+          });
+        });
+        const statusSeriesFor = (accountType, category, bucket) => {
+          const arr = statusTotals[accountType] && statusTotals[accountType][category] && statusTotals[accountType][category][bucket];
+          return arr ? arr.map(toMillion) : months.map(() => 0);
+        };
         [...keys].forEach(compoundKey => {
           const [accountType, category] = compoundKey.split("|");
           if (!categoryFlows[accountType]) categoryFlows[accountType] = {};
@@ -3492,6 +3529,11 @@ window.INVENTORY_LOCK=(()=>{
                 .find(item => item.accountType === accountType && item.category === category);
               return toMillion(row?.amount);
             }),
+            normal: statusSeriesFor(accountType, category, "일반"),
+            risk3: statusSeriesFor(accountType, category, "3개월"),
+            risk6: statusSeriesFor(accountType, category, "6개월"),
+            risk12: statusSeriesFor(accountType, category, "12개월"),
+            unsold: statusSeriesFor(accountType, category, "미판매"),
             turnover: months.map((_, index) => {
               const row = (details[index].categoryFlowMonthly || [])
                 .find(item => !item.isTotal && item.accountType === accountType && item.category === category);
@@ -6214,6 +6256,7 @@ null과 자료 없음은 0이 아니다. 소계·상위조직과 하위조직을
 3개월·6개월·12개월은 데이터의 독립된 상태 구간명이다. 미만·이상·유입·다음 구간 이동으로 바꿔 부르거나 추정하지 않는다.
 turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·효율이 개선 또는 악화됐다고 해석하지 않는다.
 전월 비교 수치는 comparison.current와 comparison.previous, comparison.changes에 명시된 값을 사용한다. 과거 다른 월의 숫자를 전월 수치로 인용하지 않는다. 변화 연속 횟수는 comparison.consecutiveDirectionMonths를 따르고, 1개월 변화로 지속 추세를 단정하지 않는다.
+comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 작은 변화면, 그 항목은 증가·감소로 단정해 쓰지 말고 "변화가 미미해 영향이 크지 않다"는 뉘앙스로 쓰거나, 짚을 게 없으면 아예 언급하지 않는다.
 금액 구성이 크다는 사실만으로 그 항목이 증가를 주도했다고 쓰지 않는다. 해당 항목의 전월 증감이 제공된 경우에만 증감 기여를 설명한다. 원인을 묻지 않았는데 매번 자료 부족 문장을 덧붙이지 않는다.
 마크다운 제목, 별표, 글머리 기호를 쓰지 않는다. 인사말, 근거 없는 조언, 견조한 흐름·사업적 요인 같은 막연한 표현은 생략한다.`;
         function inventorySeriesEvidence(series) {
@@ -6223,8 +6266,12 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           return data.months.slice(Math.max(0, state.month - 12), state.month + 1).map((month, offset) => {
             const index = Math.max(0, state.month - 12) + offset;
             return { month, ...Object.fromEntries(Object.entries(series).map(([key, values]) => {
+              /* 화면 표시(fmtMoney)는 소수 1자리로 반올림하는데 여기는 4자리까지 줬더니,
+                 AI가 그 정밀한 값으로 직접 뺄셈해 "0.10억 원에서 0.10억 원으로 0.003억 원
+                 감소"처럼 화면에 보이는 숫자와 안 맞는 문장을 쓰는 일이 있었다. 화면과
+                 같은 소수 1자리로 맞춘다. */
               const monetary = !/turnover/i.test(key), value = values?.[index];
-              return [monetary ? key + '(억원)' : key, typeof value === 'number' ? (monetary ? +(value / 100).toFixed(4) : value) : null];
+              return [monetary ? key + '(억원)' : key, typeof value === 'number' ? (monetary ? +(value / 100).toFixed(1) : value) : null];
             })) };
           });
         }
@@ -6233,7 +6280,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           const changes = {};
           if (current && previous) for (const key of Object.keys(current)) {
             if (typeof current[key] === 'number' && typeof previous[key] === 'number') {
-              changes[key] = { difference: +(current[key] - previous[key]).toFixed(4), percent: previous[key] ? +((current[key] - previous[key]) / Math.abs(previous[key]) * 100).toFixed(2) : null };
+              changes[key] = { difference: +(current[key] - previous[key]).toFixed(1), percent: previous[key] ? +((current[key] - previous[key]) / Math.abs(previous[key]) * 100).toFixed(1) : null };
             }
           }
           let consecutiveDirectionMonths = 0;
@@ -6265,8 +6312,8 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           const inv = current(data.inventory), normal = current(data.normal), r3 = current(data.risk3), r6 = current(data.risk6), r12 = current(data.risk12), unsold = current(data.unsold);
           const turnover = data.turnover[state.month];
           answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">전체 재고 현황</span></h3>
-            <p class="rag-answer-summary">${data.months[state.month]} 기준 전체 재고 요약입니다.</p>
-            ${chips([data.months[state.month], "전체 재고"])}
+            <p class="rag-answer-summary">${selectedMonthName()}말 기준 전체 재고 요약입니다.</p>
+            ${chips([selectedMonthName() + "말", "전체 재고"])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>전체 재고</span><b>${fmtMoney(inv)}</b></div>
               <div class="rag-kpi"><span>일반 재고</span><b>${fmtMoney(normal)}</b></div>
@@ -6289,8 +6336,8 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           insightContext = { kind: 'aging', unit: '억원', history: inventorySeriesEvidence({ inventory: data.inventory, aging3: data.risk3, aging6: data.risk6, aging12: data.risk12 }) };
           const r3 = current(data.risk3), r6 = current(data.risk6), r12 = current(data.risk12), total = r3 + r6 + r12;
           answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">부동·체화재고 현황</span></h3>
-            <p class="rag-answer-summary">${data.months[state.month]} 기준, 정상 판매 주기를 벗어난 재고입니다.</p>
-            ${chips([data.months[state.month], "부동·체화재고"])}
+            <p class="rag-answer-summary">${selectedMonthName()}말 기준, 정상 판매 주기를 벗어난 재고입니다.</p>
+            ${chips([selectedMonthName() + "말", "부동·체화재고"])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>3개월 구간</span><b>${fmtMoney(r3)}</b></div>
               <div class="rag-kpi"><span>6개월 구간</span><b>${fmtMoney(r6)}</b></div>
@@ -6330,8 +6377,8 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           const statusTableRows = statusRows.map(r => `<tr><td><b>${escHtml(r.status)}</b></td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${r.pct.toFixed(1)}%</td></tr>`).join("");
           const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(org.label)} <span class="rag-basis rag-basis-blue">재고 현황</span></h3>
-            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
-            ${chips([data.months[state.month], org.label])}
+            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
+            ${chips([selectedMonthName() + "말", org.label])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>재고액</span><b>${fmtMoney(value)}</b></div>
               <div class="rag-kpi"><span>전체 비중</span><b>${share.toFixed(1)}%</b></div>
@@ -6362,21 +6409,39 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           };
           const rows = leafNames.map(name => ({ name: data.orgs[name].label, value: valueFor(name) }))
             .sort((a, b) => direction === "asc" ? a.value - b.value : b.value - a.value).slice(0, limit);
-          const body = rows.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td></tr>`).join("");
+          /* 순위만 보여주고 이게 전체 재고에서 어느 정도 비중인지가 없었다 — 이 구간(전체
+             재고 또는 콕 집은 상태 구간)의 회사 전체 합계 대비 비중(%)을 같이 보여준다. */
+          const companyTotal = !status ? current(data.orgs["전체"].inventory)
+            : status === "일반" ? current(data.normal)
+            : status === "3개월" ? current(data.risk3)
+            : status === "6개월" ? current(data.risk6)
+            : status === "12개월" ? current(data.risk12)
+            : status === "미판매" ? current(data.unsold)
+            : current(data.risk3) + current(data.risk6) + current(data.risk12); // 부동전체
+          const shareOf = value => companyTotal ? (value / companyTotal * 100).toFixed(1) + "%" : "-";
+          const body = rows.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${shareOf(row.value)}</td></tr>`).join("");
           const title = statusLabel ? `조직별 ${statusLabel} ${direction === "asc" ? "적은" : "많은"} 순` : `조직별 재고 ${direction === "asc" ? "적은" : "많은"} 순`;
           /* 이전에는 순위표만 그리고 insightContext를 안 남겨서 AI 정리가 아예 안 붙었다.
              다른 렌더 함수처럼 여기서도 남겨야 handleQuestion이 정리를 요청한다. */
-          insightContext = { kind: "orgRank", unit: "억원", target: title, rows: rows.map(r => ({ 조직: r.name, [statusLabel ? statusLabel + "억원" : "재고액억원"]: +(r.value / 100).toFixed(4) })) };
-          answer.innerHTML = `<h3>${escHtml(title)} <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>${statusLabel ? escHtml(statusLabel) : "재고액"}</th></tr></thead><tbody>${body}</tbody></table></div>
+          insightContext = { kind: "orgRank", unit: "억원", target: title, companyTotal억원: +(companyTotal / 100).toFixed(4), rows: rows.map(r => ({ 조직: r.name, [statusLabel ? statusLabel + "억원" : "재고액억원"]: +(r.value / 100).toFixed(4), 전체대비비중: shareOf(r.value) })) };
+          answer.innerHTML = `<h3>${escHtml(title)} <span class="rag-basis rag-basis-blue">(${selectedMonthName()}말 기준)</span></h3>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>${statusLabel ? escHtml(statusLabel) : "재고액"}</th><th>비중</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
         }
 
         function renderCategory(entry) {
           const info = data.categoryFlows[entry.mode][entry.name];
-          insightContext = { kind: 'category', target: entry.name, accountType: entry.mode, unit: '억원', history: inventorySeriesEvidence({ inventory: info.inventory, turnover: info.turnover, recent3Turnover: info.recent3Turnover }) };
           const value = current(info.inventory), prev = previous(info.inventory);
           const turnover = info.turnover[state.month];
+          const statusKeys = ["일반", "3개월", "6개월", "12개월", "미판매"];
+          const statusFieldMap = { "일반": "normal", "3개월": "risk3", "6개월": "risk6", "12개월": "risk12", "미판매": "unsold" };
+          const statusRows = statusKeys.map(status => {
+            const series = info[statusFieldMap[status]];
+            const v = series ? current(series) : 0;
+            return { status, value: v, pct: value ? (v / value * 100) : 0 };
+          });
+          const statusTableRows = statusRows.map(r => `<tr><td><b>${escHtml(r.status)}</b></td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${r.pct.toFixed(1)}%</td></tr>`).join("");
+          insightContext = { kind: 'category', target: entry.name, accountType: entry.mode, unit: '억원', history: inventorySeriesEvidence({ inventory: info.inventory, normal: info.normal, aging3: info.risk3, aging6: info.risk6, aging12: info.risk12, unsold: info.unsold, turnover: info.turnover }) };
           const trendSpan = 12;
           const trendRows = [];
           for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
@@ -6384,13 +6449,15 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           }
           const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
           answer.innerHTML = `<h3>${escHtml(entry.name)} <span class="rag-basis rag-basis-blue">(${entry.mode})</span></h3>
-            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
-            ${chips([data.months[state.month], entry.mode, entry.name])}
+            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
+            ${chips([selectedMonthName() + "말", entry.mode, entry.name])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>재고액</span><b>${fmtMoney(value)}</b></div>
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
               <div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "-"}</b></div>
             </div>
+            <div class="rag-section-title">재고 상태 구성 (부동·체화 비중)</div>
+            <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
             <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}${gotoButton("products", "상품·제품에서 보기")}`;
@@ -6409,7 +6476,9 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
               return direction === "asc" ? av - bv : bv - av;
             }).slice(0, limit);
           const body = sorted.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover != null ? row.turnover.toFixed(2) : "-"}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${escHtml(mode)} ${isTurnover ? "회전율" : "재고액"} ${direction === "asc" ? "낮은" : "높은"} 순 <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
+          /* renderOrgRank와 같은 이유로 여기도 insightContext가 빠져 있어 AI 정리가 안 붙었다. */
+          insightContext = { kind: "categoryRank", unit: "억원", target: `${mode} ${isTurnover ? "회전율" : "재고액"} 순위`, rows: sorted.map(r => ({ 공급회사_제품군: r.name, 재고액억원: +(r.value / 100).toFixed(4), 회전율: r.turnover })) };
+          answer.innerHTML = `<h3>${escHtml(mode)} ${isTurnover ? "회전율" : "재고액"} ${direction === "asc" ? "낮은" : "높은"} 순 <span class="rag-basis rag-basis-blue">(${selectedMonthName()}말 기준)</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body || "<tr><td colspan=\"3\">자료 없음</td></tr>"}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6421,7 +6490,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
             return { name: e.name, mode: e.mode, value: current(info.inventory), turnover: typeof turnover === "number" ? turnover.toFixed(2) : "-" };
           });
           const body = rows.map(row => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${escHtml(row.name)}</b><br><small>${escHtml(row.mode)}</small></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.name)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${data.months[state.month]})</span></h3>
+          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.name)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${selectedMonthName()}말 기준)</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6432,7 +6501,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
             return { label: org.label, value: current(org.inventory) };
           });
           const body = rows.map(row => `<tr><td>${escHtml(row.label)}</td><td class="rag-amt">${fmtMoney(row.value)}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.label)).join(" · ")} <span class="rag-basis rag-basis-blue">재고 비교 (${data.months[state.month]})</span></h3>
+          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.label)).join(" · ")} <span class="rag-basis rag-basis-blue">재고 비교 (${selectedMonthName()}말 기준)</span></h3>
             <p class="rag-answer-summary">조직 단위는 회전율 자료가 없어 재고액만 비교합니다.</p>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>재고액</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
@@ -6453,7 +6522,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
             return { mode, inventory, turnover: typeof turnover === "number" ? turnover.toFixed(2) : "-" };
           });
           const body = rows.map(row => `<tr><td><b>${escHtml(row.mode)}</b></td><td class="rag-amt">${fmtMoney(row.inventory)}</td><td>${row.turnover}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.mode)).join(" · ")} <span class="rag-basis rag-basis-blue">${list.length === 1 ? '재고 현황' : '비교'} (${data.months[state.month]})</span></h3>
+          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.mode)).join(" · ")} <span class="rag-basis rag-basis-blue">${list.length === 1 ? '재고 현황' : '비교'} (${selectedMonthName()}말 기준)</span></h3>
             <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6462,7 +6531,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
           const totals = data.accountTypeTurnoverTotals && data.accountTypeTurnoverTotals[mode];
           const turnover = totals && totals.turnover ? totals.turnover[state.month] : null;
           answer.innerHTML = `<h3>${escHtml(mode)} <span class="rag-basis rag-basis-blue">회전율</span></h3>
-            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
+            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
             <div class="rag-kpis"><div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "자료 없음"}</b></div></div>
             ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6475,9 +6544,12 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
             trendRows.push({ month: data.months[i], value: product.values[i] || 0 });
           }
           const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
+          /* renderOrgRank와 같은 이유로 여기도 insightContext가 없어서 품목 검색엔 AI 정리가
+             아예 안 붙었다. */
+          insightContext = { kind: "item", unit: "억원", target: product.name, code: product.code, status: product.status, history: inventorySeriesEvidence({ inventory: product.values }) };
           answer.innerHTML = `<h3>${escHtml(product.name)} <span class="rag-basis rag-basis-blue">(${escHtml(product.code)})</span></h3>
-            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
-            ${chips([data.months[state.month], product.type, product.group, product.status])}
+            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
+            ${chips([selectedMonthName() + "말", product.type, product.group, product.status])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>재고액</span><b>${fmtMoney(value)}</b></div>
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
@@ -6491,7 +6563,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
         function renderDevProjectOverview() {
           const detail = data.devProjects;
           if (!detail || !detail.rows || !detail.rows.length) {
-            answer.innerHTML = `<h3>개발&amp;프로젝트</h3><p class="rag-answer-summary">${data.months[state.month]}에는 개발&amp;프로젝트 자료가 없습니다.</p>`;
+            answer.innerHTML = `<h3>개발&amp;프로젝트</h3><p class="rag-answer-summary">${selectedMonthName()}에는 개발&amp;프로젝트 자료가 없습니다.</p>`;
             return;
           }
           const total = detail.rows.find(r => r.category === "전체");
@@ -6543,7 +6615,7 @@ turnover가 올랐거나 내렸다는 사실만 쓸 수 있다. 회전속도·�
               return true;
             }
             const value = current(data.unsold);
-            answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">미판매 재고</span></h3><p class="rag-answer-summary">${data.months[state.month]} 기준 미판매 재고입니다. (회사 전체 금액입니다. 조직별 금액은 해당 조직 재고 현황에서 확인할 수 있습니다)</p><div class="rag-kpis"><div class="rag-kpi"><span>미판매 재고</span><b>${fmtMoney(value)}</b></div></div>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("overview", "전체 현황에서 보기")}`;
+            answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">미판매 재고</span></h3><p class="rag-answer-summary">${selectedMonthName()}말 기준 미판매 재고입니다. (회사 전체 금액입니다. 조직별 금액은 해당 조직 재고 현황에서 확인할 수 있습니다)</p><div class="rag-kpis"><div class="rag-kpi"><span>미판매 재고</span><b>${fmtMoney(value)}</b></div></div>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("overview", "전체 현황에서 보기")}`;
             return true;
           }
           if (/(부동|체화|3\s*개월|6\s*개월|12\s*개월)/.test(t) && !/회전율/.test(t)) { renderAging(); return true; }
