@@ -2987,7 +2987,7 @@
           <span class="nav-icon">✎</span><span>개발&amp;프로젝트</span>
         </button>
       </nav>
-      <div class="dev-mode-trigger" id="devModeTrigger">ver_a20</div>
+      <div class="dev-mode-trigger" id="devModeTrigger">ver_a22</div>
     </aside>
 
     <main>
@@ -3493,14 +3493,6 @@ window.INVENTORY_LOCK=(()=>{
            category 키 표기가 다를 수 있다(예: 품목 쪽 "WALVOIL" ↔ 흐름표 쪽 "WALVOIL (KR)").
            직접 문자열을 맞추면 하나도 안 걸린다. */
         const codeMap = buildCategoryCodeMap(details);
-        const bucketOf = item => {
-          const raw = `${item.inventoryStatus || ""} ${item.agingBucket || ""}`;
-          if (/12개월|부동재고12/.test(raw)) return "12개월";
-          if (/6개월|부동재고6/.test(raw)) return "6개월";
-          if (/3개월|부동재고3/.test(raw)) return "3개월";
-          if (/미판매/.test(raw)) return "미판매";
-          return "일반";
-        };
         const statusTotals = {}; // statusTotals[type][category][bucket] = 월별 합계(raw amount) 배열
         months.forEach((_, index) => {
           (details[index].itemMonthly || []).forEach(item => {
@@ -3509,7 +3501,7 @@ window.INVENTORY_LOCK=(()=>{
             const category = String(item.category ?? "").trim();
             const flow = resolveFlow(codeMap, type, finalCategory, category);
             if (!flow) return;
-            const bucket = bucketOf(item);
+            const bucket = statusBucketOf(item.inventoryStatus, item.agingBucket);
             if (!statusTotals[flow.type]) statusTotals[flow.type] = {};
             if (!statusTotals[flow.type][flow.category]) statusTotals[flow.type][flow.category] = {};
             if (!statusTotals[flow.type][flow.category][bucket]) statusTotals[flow.type][flow.category][bucket] = new Array(months.length).fill(0);
@@ -3643,6 +3635,18 @@ window.INVENTORY_LOCK=(()=>{
       const normalizeAccountType = value =>
         ["원자재", "부자재", "반제품", "원부자재"].includes(value) ? "원부자재" : (value || "미분류");
 
+      // 품목 원본의 재고상태(inventoryStatus)는 "일반재고"·"부동재고3"·"부동재고6"·
+      // "부동재고12"·"미판매" 식이지, "3개월"이 아니다 — 화면에 쓰는 "일반"/"3개월"/
+      // "6개월"/"12개월"/"미판매" 라벨로 여기서 한 곳에서만 정규화한다.
+      function statusBucketOf(rawStatus, rawAgingBucket) {
+        const raw = `${rawStatus || ""} ${rawAgingBucket || ""}`;
+        if (/12개월|부동재고12/.test(raw)) return "12개월";
+        if (/6개월|부동재고6/.test(raw)) return "6개월";
+        if (/3개월|부동재고3/.test(raw)) return "3개월";
+        if (/미판매/.test(raw)) return "미판매";
+        return "일반";
+      }
+
       // 흐름 칩(categoryFlowMonthly.category)과 품목을 잇는 열쇠는 품목의 finalCategory다.
       // 칩은 표시명(CASAPPA&IKRON)이고 품목이 들고 있는 값은 코드(CAS)라 이름끼리는 맞지 않는다.
       // categoryCode → category 표시명 사전을 만들어 두고, 표시명 자체로 들어온 값도 통과시킨다.
@@ -3701,7 +3705,10 @@ window.INVENTORY_LOCK=(()=>{
             flowType: flow?.type ?? null,
             flowCategory: flow?.category ?? null,
             status: item.inventoryStatus || "일반재고",
-            values: months.map((_, index) => toMillion(monthlyItems[index].get(item.code)?.amount))
+            values: months.map((_, index) => toMillion(monthlyItems[index].get(item.code)?.amount)),
+            // 품목 하나는 한 달에 재고상태 하나에만 속한다(3/6/12개월로 동시에 나뉘지 않는다).
+            // 달마다 어느 상태였는지 이력을 남겨 품목 상세에서 "몇 개월째 부동재고인지" 보여준다.
+            statuses: months.map((_, index) => monthlyItems[index].get(item.code)?.inventoryStatus || null)
           };
         });
       }
@@ -6312,8 +6319,8 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           const inv = current(data.inventory), normal = current(data.normal), r3 = current(data.risk3), r6 = current(data.risk6), r12 = current(data.risk12), unsold = current(data.unsold);
           const turnover = data.turnover[state.month];
           answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">전체 재고 현황</span></h3>
-            <p class="rag-answer-summary">${selectedMonthName()}말 기준 전체 재고 요약입니다.</p>
-            ${chips([selectedMonthName() + "말", "전체 재고"])}
+            <p class="rag-answer-summary">${data.months[state.month]} 기준 전체 재고 요약입니다.</p>
+            ${chips([data.months[state.month], "전체 재고"])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>전체 재고</span><b>${fmtMoney(inv)}</b></div>
               <div class="rag-kpi"><span>일반 재고</span><b>${fmtMoney(normal)}</b></div>
@@ -6336,8 +6343,8 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           insightContext = { kind: 'aging', unit: '억원', history: inventorySeriesEvidence({ inventory: data.inventory, aging3: data.risk3, aging6: data.risk6, aging12: data.risk12 }) };
           const r3 = current(data.risk3), r6 = current(data.risk6), r12 = current(data.risk12), total = r3 + r6 + r12;
           answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">부동·체화재고 현황</span></h3>
-            <p class="rag-answer-summary">${selectedMonthName()}말 기준, 정상 판매 주기를 벗어난 재고입니다.</p>
-            ${chips([selectedMonthName() + "말", "부동·체화재고"])}
+            <p class="rag-answer-summary">${data.months[state.month]} 기준, 정상 판매 주기를 벗어난 재고입니다.</p>
+            ${chips([data.months[state.month], "부동·체화재고"])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>3개월 구간</span><b>${fmtMoney(r3)}</b></div>
               <div class="rag-kpi"><span>6개월 구간</span><b>${fmtMoney(r6)}</b></div>
@@ -6369,27 +6376,33 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           const trendSpan = 12;
           const trendRows = [];
           for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
-            trendRows.push({ month: data.months[i], value: org.inventory[i] || 0 });
+            trendRows.push({ month: data.months[i], value: org.inventory[i] || 0, index: i });
           }
           const statusSeries = Object.fromEntries(statusKeys.map(status => [status, aggregateTeamSeries(teams, team => data.orgAnalysis.statusByTeam[team]?.[status])]));
           insightContext = { kind: 'org', target: org.label, unit: '억원', history: inventorySeriesEvidence({ inventory: org.inventory, ...statusSeries }), categories: categoryRows.map(row => ({accountType:row.type, amount억원:+(row.value/100).toFixed(4)})), companyHistory: inventorySeriesEvidence({ inventory: data.inventory }) };
           const categoryTableRows = categoryRows.map(r => `<tr><td><b>${escHtml(r.type)}</b></td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
           const statusTableRows = statusRows.map(r => `<tr><td><b>${escHtml(r.status)}</b></td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${r.pct.toFixed(1)}%</td></tr>`).join("");
-          const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
+          /* 월별 재고 추이 표에 그 달 전체 재고 대비 비중(%)을 추가한다 — 금액만 봐서는
+             회사 전체가 커진 건지 이 조직만 커진 건지 구분이 안 된다. */
+          const trendTableRows = trendRows.slice().reverse().map(r => {
+            const companyTotal = data.inventory[r.index] || 0;
+            const share = companyTotal ? (r.value / companyTotal * 100).toFixed(1) + "%" : "-";
+            return `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${share}</td></tr>`;
+          }).join("");
           answer.innerHTML = `<h3>${escHtml(org.label)} <span class="rag-basis rag-basis-blue">재고 현황</span></h3>
-            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
-            ${chips([selectedMonthName() + "말", org.label])}
+            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
+            ${chips([data.months[state.month], org.label])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>재고액</span><b>${fmtMoney(value)}</b></div>
               <div class="rag-kpi"><span>전체 비중</span><b>${share.toFixed(1)}%</b></div>
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
             </div>
-            <div class="rag-section-title">상품·제품·원부자재 구성</div>
+            <div class="rag-section-title">${escHtml(org.label)} 상품·제품·원부자재 구성</div>
             <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th></tr></thead><tbody>${categoryTableRows}</tbody></table></div>
-            <div class="rag-section-title">재고 상태 구성 (부동·체화 비중)</div>
+            <div class="rag-section-title">${escHtml(org.label)} 재고 상태 구성 (부동·체화 비중)</div>
             <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
-            <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
+            <div class="rag-section-title">${escHtml(org.label)} 최근 ${trendRows.length}개월 재고 추이</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th><th>전체 비중</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
         }
 
@@ -6424,7 +6437,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           /* 이전에는 순위표만 그리고 insightContext를 안 남겨서 AI 정리가 아예 안 붙었다.
              다른 렌더 함수처럼 여기서도 남겨야 handleQuestion이 정리를 요청한다. */
           insightContext = { kind: "orgRank", unit: "억원", target: title, companyTotal억원: +(companyTotal / 100).toFixed(4), rows: rows.map(r => ({ 조직: r.name, [statusLabel ? statusLabel + "억원" : "재고액억원"]: +(r.value / 100).toFixed(4), 전체대비비중: shareOf(r.value) })) };
-          answer.innerHTML = `<h3>${escHtml(title)} <span class="rag-basis rag-basis-blue">(${selectedMonthName()}말 기준)</span></h3>
+          answer.innerHTML = `<h3>${escHtml(title)} <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>${statusLabel ? escHtml(statusLabel) : "재고액"}</th><th>비중</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
         }
@@ -6445,21 +6458,25 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           const trendSpan = 12;
           const trendRows = [];
           for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
-            trendRows.push({ month: data.months[i], value: info.inventory[i] || 0 });
+            trendRows.push({ month: data.months[i], value: info.inventory[i] || 0, index: i });
           }
-          const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
+          const trendTableRows = trendRows.slice().reverse().map(r => {
+            const companyTotal = data.inventory[r.index] || 0;
+            const share = companyTotal ? (r.value / companyTotal * 100).toFixed(1) + "%" : "-";
+            return `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${share}</td></tr>`;
+          }).join("");
           answer.innerHTML = `<h3>${escHtml(entry.name)} <span class="rag-basis rag-basis-blue">(${entry.mode})</span></h3>
-            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
-            ${chips([selectedMonthName() + "말", entry.mode, entry.name])}
+            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
+            ${chips([data.months[state.month], entry.mode, entry.name])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>재고액</span><b>${fmtMoney(value)}</b></div>
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
               <div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "-"}</b></div>
             </div>
-            <div class="rag-section-title">재고 상태 구성 (부동·체화 비중)</div>
+            <div class="rag-section-title">${escHtml(entry.name)} 재고 상태 구성 (부동·체화 비중)</div>
             <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>비중</th></tr></thead><tbody>${statusTableRows}</tbody></table></div>
-            <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
+            <div class="rag-section-title">${escHtml(entry.name)} 최근 ${trendRows.length}개월 재고 추이</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th><th>전체 비중</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
 
@@ -6478,7 +6495,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           const body = sorted.map((row, i) => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${i + 1}. ${escHtml(row.name)}</b></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover != null ? row.turnover.toFixed(2) : "-"}</td></tr>`).join("");
           /* renderOrgRank와 같은 이유로 여기도 insightContext가 빠져 있어 AI 정리가 안 붙었다. */
           insightContext = { kind: "categoryRank", unit: "억원", target: `${mode} ${isTurnover ? "회전율" : "재고액"} 순위`, rows: sorted.map(r => ({ 공급회사_제품군: r.name, 재고액억원: +(r.value / 100).toFixed(4), 회전율: r.turnover })) };
-          answer.innerHTML = `<h3>${escHtml(mode)} ${isTurnover ? "회전율" : "재고액"} ${direction === "asc" ? "낮은" : "높은"} 순 <span class="rag-basis rag-basis-blue">(${selectedMonthName()}말 기준)</span></h3>
+          answer.innerHTML = `<h3>${escHtml(mode)} ${isTurnover ? "회전율" : "재고액"} ${direction === "asc" ? "낮은" : "높은"} 순 <span class="rag-basis rag-basis-blue">(${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body || "<tr><td colspan=\"3\">자료 없음</td></tr>"}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6490,7 +6507,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
             return { name: e.name, mode: e.mode, value: current(info.inventory), turnover: typeof turnover === "number" ? turnover.toFixed(2) : "-" };
           });
           const body = rows.map(row => `<tr><td><b class="rag-item-name" title="${escHtml(row.name)}">${escHtml(row.name)}</b><br><small>${escHtml(row.mode)}</small></td><td class="rag-amt">${fmtMoney(row.value)}</td><td>${row.turnover}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.name)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${selectedMonthName()}말 기준)</span></h3>
+          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.name)).join(" · ")} <span class="rag-basis rag-basis-blue">비교 (${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>공급회사·제품군</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "부동·체화재고 현황"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6501,7 +6518,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
             return { label: org.label, value: current(org.inventory) };
           });
           const body = rows.map(row => `<tr><td>${escHtml(row.label)}</td><td class="rag-amt">${fmtMoney(row.value)}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.label)).join(" · ")} <span class="rag-basis rag-basis-blue">재고 비교 (${selectedMonthName()}말 기준)</span></h3>
+          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.label)).join(" · ")} <span class="rag-basis rag-basis-blue">재고 비교 (${data.months[state.month]})</span></h3>
             <p class="rag-answer-summary">조직 단위는 회전율 자료가 없어 재고액만 비교합니다.</p>
             <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>조직</th><th>재고액</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["재고 많은 조직 5개", "이번 달 전체 재고 얼마"])}${gotoButton("teams", "팀별 분석에서 보기")}`;
@@ -6522,7 +6539,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
             return { mode, inventory, turnover: typeof turnover === "number" ? turnover.toFixed(2) : "-" };
           });
           const body = rows.map(row => `<tr><td><b>${escHtml(row.mode)}</b></td><td class="rag-amt">${fmtMoney(row.inventory)}</td><td>${row.turnover}</td></tr>`).join("");
-          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.mode)).join(" · ")} <span class="rag-basis rag-basis-blue">${list.length === 1 ? '재고 현황' : '비교'} (${selectedMonthName()}말 기준)</span></h3>
+          answer.innerHTML = `<h3>${rows.map(r => escHtml(r.mode)).join(" · ")} <span class="rag-basis rag-basis-blue">${list.length === 1 ? '재고 현황' : '비교'} (${data.months[state.month]})</span></h3>
             <div class="rag-table-wrap"><table class="rag-table rag-table-compact"><thead><tr><th>구분</th><th>재고액</th><th>회전율</th></tr></thead><tbody>${body}</tbody></table></div>
             ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6531,7 +6548,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           const totals = data.accountTypeTurnoverTotals && data.accountTypeTurnoverTotals[mode];
           const turnover = totals && totals.turnover ? totals.turnover[state.month] : null;
           answer.innerHTML = `<h3>${escHtml(mode)} <span class="rag-basis rag-basis-blue">회전율</span></h3>
-            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
+            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
             <div class="rag-kpis"><div class="rag-kpi"><span>회전율</span><b>${typeof turnover === "number" ? turnover.toFixed(2) : "자료 없음"}</b></div></div>
             ${followups(["상품 회전율", "제품 회전율", "원부자재 회전율"])}${gotoButton("products", "상품·제품에서 보기")}`;
         }
@@ -6541,22 +6558,31 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
           const trendSpan = 12;
           const trendRows = [];
           for (let i = Math.max(0, state.month - (trendSpan - 1)); i <= state.month; i++) {
-            trendRows.push({ month: data.months[i], value: product.values[i] || 0 });
+            trendRows.push({ month: data.months[i], value: product.values[i] || 0, index: i });
           }
-          const trendTableRows = trendRows.slice().reverse().map(r => `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td></tr>`).join("");
+          /* 품목 하나는 한 달에 재고상태 하나에만 속하므로(3/6/12개월로 동시에 나뉘지 않는다)
+             3/6/12 세 칸을 만드는 대신, 달마다 어느 상태였는지 이력을 보여준다 — "몇 개월째
+             부동재고인지"는 이렇게 확인할 수 있다. */
+          const trendTableRows = trendRows.slice().reverse().map(r => {
+            const companyTotal = data.inventory[r.index] || 0;
+            const share = companyTotal ? (r.value / companyTotal * 100).toFixed(2) + "%" : "-";
+            const status = product.statuses && product.statuses[r.index] != null
+              ? statusBucketOf(product.statuses[r.index]) : (r.value ? "-" : "");
+            return `<tr><td>${escHtml(r.month)}</td><td class="rag-amt">${fmtMoney(r.value)}</td><td>${share}</td><td>${escHtml(status)}</td></tr>`;
+          }).join("");
           /* renderOrgRank와 같은 이유로 여기도 insightContext가 없어서 품목 검색엔 AI 정리가
              아예 안 붙었다. */
-          insightContext = { kind: "item", unit: "억원", target: product.name, code: product.code, status: product.status, history: inventorySeriesEvidence({ inventory: product.values }) };
+          insightContext = { kind: "item", unit: "억원", target: product.name, code: product.code, status: statusBucketOf(product.status), history: inventorySeriesEvidence({ inventory: product.values }), statusHistory: trendRows.map(r => ({ month: r.month, 재고상태: product.statuses && product.statuses[r.index] != null ? statusBucketOf(product.statuses[r.index]) : null })) };
           answer.innerHTML = `<h3>${escHtml(product.name)} <span class="rag-basis rag-basis-blue">(${escHtml(product.code)})</span></h3>
-            <p class="rag-answer-summary">${selectedMonthName()}말 기준입니다.</p>
-            ${chips([selectedMonthName() + "말", product.type, product.group, product.status])}
+            <p class="rag-answer-summary">${data.months[state.month]} 기준입니다.</p>
+            ${chips([data.months[state.month], product.type, product.group, product.status])}
             <div class="rag-kpis">
               <div class="rag-kpi"><span>재고액</span><b>${fmtMoney(value)}</b></div>
               <div class="rag-kpi"><span>전월 대비</span><b>${fmtMoney(value - prev)}</b></div>
               <div class="rag-kpi"><span>재고상태</span><b>${escHtml(product.status)}</b></div>
             </div>
-            <div class="rag-section-title">최근 ${trendRows.length}개월 재고 추이</div>
-            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
+            <div class="rag-section-title">${escHtml(product.code)} 최근 ${trendRows.length}개월 재고 추이</div>
+            <div class="rag-table-wrap"><table class="rag-table"><thead><tr><th>월</th><th>재고액</th><th>전체 비중</th><th>재고상태</th></tr></thead><tbody>${trendTableRows}</tbody></table></div>
             ${followups(["부동·체화재고 현황", "이번 달 전체 재고 얼마"])}${gotoButton("items", "품목별 재고에서 보기")}`;
         }
 
@@ -6615,7 +6641,7 @@ comparison.changes의 difference가 0.0이거나 금액·비율 모두 아주 �
               return true;
             }
             const value = current(data.unsold);
-            answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">미판매 재고</span></h3><p class="rag-answer-summary">${selectedMonthName()}말 기준 미판매 재고입니다. (회사 전체 금액입니다. 조직별 금액은 해당 조직 재고 현황에서 확인할 수 있습니다)</p><div class="rag-kpis"><div class="rag-kpi"><span>미판매 재고</span><b>${fmtMoney(value)}</b></div></div>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("overview", "전체 현황에서 보기")}`;
+            answer.innerHTML = `<h3>${selectedMonthName()} <span class="rag-basis rag-basis-blue">미판매 재고</span></h3><p class="rag-answer-summary">${data.months[state.month]} 기준 미판매 재고입니다. (회사 전체 금액입니다. 조직별 금액은 해당 조직 재고 현황에서 확인할 수 있습니다)</p><div class="rag-kpis"><div class="rag-kpi"><span>미판매 재고</span><b>${fmtMoney(value)}</b></div></div>${followups(["이번 달 전체 재고 얼마", "부동·체화재고 현황"])}${gotoButton("overview", "전체 현황에서 보기")}`;
             return true;
           }
           if (/(부동|체화|3\s*개월|6\s*개월|12\s*개월)/.test(t) && !/회전율/.test(t)) { renderAging(); return true; }
